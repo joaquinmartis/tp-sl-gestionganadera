@@ -5,18 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: nextjs-app
     ports:
-      - "8080:8080"
-    depends_on:
-      - mongodb
-
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-
-volumes:
-  mongodb_data:
+      - "3000:3000"
+    restart: always
