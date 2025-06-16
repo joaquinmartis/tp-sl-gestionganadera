@@ -1,10 +1,23 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight, MoreHorizontal, Search, Trash, UserPlus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  Search,
+  Trash,
+  UserPlus,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,70 +34,64 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useToast } from "@/hooks/use-toast"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
-// Datos de ejemplo para usuarios
-const mockUsers = [
-  {
-    id: "1",
-    name: "Administrador",
-    email: "admin@ejemplo.com",
-    role: "Administrador",
-    createdAt: "2023-01-15",
-  },
-  {
-    id: "2",
-    name: "Juan Pérez",
-    email: "juan@ejemplo.com",
-    role: "Supervisor",
-    createdAt: "2023-02-20",
-  },
-  {
-    id: "3",
-    name: "María López",
-    email: "maria@ejemplo.com",
-    role: "Operador",
-    createdAt: "2023-03-10",
-  },
-  {
-    id: "4",
-    name: "Carlos Rodríguez",
-    email: "carlos@ejemplo.com",
-    role: "Operador",
-    createdAt: "2023-04-05",
-  },
-  {
-    id: "5",
-    name: "Ana Martínez",
-    email: "ana@ejemplo.com",
-    role: "Supervisor",
-    createdAt: "2023-05-12",
-  },
-]
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+};
 
 export default function UsersPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [users, setUsers] = useState<User[]>([]);
+  const router = useRouter();
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
     password: "",
-  })
-  const [users, setUsers] = useState(mockUsers)
+  });
+
+  useEffect(() => {
+    fetch("/api/users")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setUsers(data.data);
+        }
+      })
+      .catch(() => {
+        toast({
+          title: "Error",
+          description: "No se pudieron obtener los usuarios del servidor",
+          variant: "destructive",
+        });
+      });
+  }, []);
 
   // Filtrar usuarios por término de búsqueda
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      user.role.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleCreateUser = () => {
     // Validar campos
@@ -93,24 +100,24 @@ export default function UsersPage() {
         title: "Error",
         description: "Todos los campos son obligatorios",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newUser.email)) {
       toast({
         title: "Error",
         description: "El formato del email no es válido",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Crear nuevo usuario
-    const newId = (users.length + 1).toString()
-    const today = new Date().toISOString().split("T")[0]
+    const newId = (users.length + 1).toString();
+    const today = new Date().toISOString().split("T")[0];
 
     setUsers([
       ...users,
@@ -121,40 +128,72 @@ export default function UsersPage() {
         role: "Operador", // Rol por defecto
         createdAt: today,
       },
-    ])
+    ]);
 
     // Limpiar formulario y cerrar diálogo
     setNewUser({
       name: "",
       email: "",
       password: "",
+    });
+    setIsCreateDialogOpen(false);
+
+    // Crear el usuario en la base de datos
+    fetch("/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: newUser.name,
+        email: newUser.email,
+        password: newUser.password,
+      }),
     })
-    setIsCreateDialogOpen(false)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) {
+          throw new Error(data.error || "Error al crear el usuario");
+        }
+      })
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      });
 
     // Mostrar notificación
     toast({
       title: "Usuario creado",
       description: `Se ha creado el usuario ${newUser.name} correctamente`,
-    })
-  }
+    });
+  };
 
   const handleDeleteUser = (id: string) => {
-    setUsers(users.filter((user) => user.id !== id))
+    setUsers(users.filter((user) => user.id !== id));
     toast({
       title: "Usuario eliminado",
       description: "El usuario ha sido eliminado correctamente",
-    })
-  }
+    });
+  };
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       <header className="bg-white border-b h-16 flex items-center px-4 justify-between">
         <div className="flex items-center">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/dashboard")}
+          >
             <ChevronLeft className="h-5 w-5" />
             <span className="sr-only">Volver</span>
           </Button>
-          <h1 className="text-lg font-bold text-green-800 ml-2">Gestión de Usuarios</h1>
+          <h1 className="text-lg font-bold text-green-800 ml-2">
+            Gestión de Usuarios
+          </h1>
         </div>
       </header>
 
@@ -164,9 +203,14 @@ export default function UsersPage() {
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle>Usuarios</CardTitle>
-                <CardDescription>Gestiona los usuarios del sistema</CardDescription>
+                <CardDescription>
+                  Gestiona los usuarios del sistema
+                </CardDescription>
               </div>
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <Dialog
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+              >
                 <DialogTrigger asChild>
                   <Button>
                     <UserPlus className="mr-2 h-4 w-4" />
@@ -176,7 +220,10 @@ export default function UsersPage() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Crear nuevo usuario</DialogTitle>
-                    <DialogDescription>Completa los datos para crear un nuevo usuario en el sistema.</DialogDescription>
+                    <DialogDescription>
+                      Completa los datos para crear un nuevo usuario en el
+                      sistema.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
@@ -185,7 +232,9 @@ export default function UsersPage() {
                         id="name"
                         placeholder="Nombre completo"
                         value={newUser.name}
-                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, name: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -195,7 +244,9 @@ export default function UsersPage() {
                         type="email"
                         placeholder="correo@ejemplo.com"
                         value={newUser.email}
-                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, email: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -205,12 +256,17 @@ export default function UsersPage() {
                         type="password"
                         placeholder="••••••••"
                         value={newUser.password}
-                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, password: e.target.value })
+                        }
                       />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCreateDialogOpen(false)}
+                    >
                       Cancelar
                     </Button>
                     <Button onClick={handleCreateUser}>Crear Usuario</Button>
@@ -245,14 +301,19 @@ export default function UsersPage() {
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                      <TableCell
+                        colSpan={5}
+                        className="text-center h-24 text-muted-foreground"
+                      >
                         No se encontraron usuarios
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredUsers.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell className="font-medium">
+                          {user.name}
+                        </TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{user.role}</TableCell>
                         <TableCell>{user.createdAt}</TableCell>
@@ -286,7 +347,8 @@ export default function UsersPage() {
 
             <div className="flex items-center justify-end space-x-2 py-4">
               <div className="text-sm text-muted-foreground">
-                Mostrando <span className="font-medium">{filteredUsers.length}</span> de{" "}
+                Mostrando{" "}
+                <span className="font-medium">{filteredUsers.length}</span> de{" "}
                 <span className="font-medium">{users.length}</span> usuarios
               </div>
               <Button variant="outline" size="sm" disabled>
@@ -300,5 +362,5 @@ export default function UsersPage() {
         </Card>
       </main>
     </div>
-  )
+  );
 }
