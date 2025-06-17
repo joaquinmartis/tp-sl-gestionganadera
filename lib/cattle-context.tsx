@@ -55,19 +55,24 @@ export function CattleProvider({ children }: { children: ReactNode }) {
   const fetchData = async () => {
     try {
       // 1. Obtener zonas (si aún no las guardaste en Mongo, usá las mockeadas)
-      const mockZones = generateMockZones()
-      setZones(mockZones)
 
-      // 2. Obtener ganado desde la API
-      const res = await fetch("/api/cattle")
-      const data = await res.json()
-
-      if (data.success) {
-        setCattle(data.data)
+      const resZones = await fetch("/api/zones")
+      const dataZones = await resZones.json()
+      if (dataZones.success) {
+        setZones(dataZones.data)
       } else {
-        console.error("Error al obtener el ganado:", data.error)
+        console.error("Error al obtener las zonas:", dataZones.error)
       }
 
+      // 2. Obtener ganado desde la API
+      const resCattle = await fetch("/api/cattle")
+      const dataCattle = await resCattle.json()
+
+      if (dataCattle.success) {
+        setCattle(dataCattle.data)
+      } else {
+        console.error("Error al obtener el ganado:", dataCattle.error)
+      }
       // 3. Reproducir sonido de bienvenida
       const audio = new Audio("/moo.mp3")
       audio.play().catch((e) => console.log("Error reproduciendo audio:", e))

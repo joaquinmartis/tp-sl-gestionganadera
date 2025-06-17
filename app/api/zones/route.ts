@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import clientPromise from "@/lib/mongodb";
 
 /**
  * GET /api/zones
@@ -6,30 +7,11 @@ import { NextResponse } from "next/server"
  */
 export async function GET() {
   try {
-    // Simulación de datos de zonas
-    const zones = [
-      {
-        id: "farm",
-        name: "Granja Completa",
-        description: "Perímetro completo de la granja",
-        bounds: [
-          [40.7028, -74.016],
-          [40.7228, -73.996],
-        ],
-        color: "#3b82f6",
-      },
-      {
-        id: "stables",
-        name: "Establos",
-        description: "Área de descanso para el ganado",
-        bounds: [
-          [40.7048, -74.014],
-          [40.7088, -74.01],
-        ],
-        color: "#ef4444",
-      },
-      // Otras zonas se agregarían aquí
-    ]
+    const client = await clientPromise
+    const db = client.db()
+    const collection = db.collection("zones")
+
+    let zones = await collection.find().toArray()
 
     return NextResponse.json(
       {
