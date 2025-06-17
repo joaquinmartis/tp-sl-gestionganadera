@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import clientPromise from "@/lib/mongodb";
 
 /**
  * GET /api/cattle
@@ -22,37 +23,12 @@ export async function GET(request: NextRequest) {
       ? Number.parseFloat(searchParams.get("radius") || "")
       : null;
 
+    const client = await clientPromise
+    const db = client.db()
+    const collection = db.collection("cattle")
+
+    let cattle = await collection.find().toArray()
     // Simulación de datos de ganado
-    const cattle = [
-      {
-        id: "cow-1",
-        name: "Bella",
-        description: "Holstein de 5 años, alta productora de leche",
-        imageUrl: "/placeholder.svg?height=200&width=200",
-        position: [40.7128, -74.006] as [number, number],
-        connected: true,
-        zoneId: "farm",
-      },
-      {
-        id: "cow-2",
-        name: "Luna",
-        description: "Jersey de 3 años, excelente calidad de leche",
-        imageUrl: "/placeholder.svg?height=200&width=200",
-        position: [40.7138, -74.008] as [number, number],
-        connected: true,
-        zoneId: "stables",
-      },
-      {
-        id: "cow-3",
-        name: "Estrella",
-        description: "Angus de 4 años, buena para carne",
-        imageUrl: "/placeholder.svg?height=200&width=200",
-        position: [40.7148, -74.007] as [number, number],
-        connected: false,
-        zoneId: "pasture",
-      },
-      // Otros animales se agregarían aquí
-    ];
 
     // Función para calcular la distancia entre dos puntos (Haversine formula)
     function calculateDistance(
@@ -126,5 +102,20 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  }
+}
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const client = await clientPromise
+    const db = client.db()
+    const collection = db.collection("cattle")
+
+    await collection.insertOne(body)
+
+    return NextResponse.json({ success: true, message: "Animal insertado correctamente" }, { status: 201 })
+  } catch (error) {
+    console.error("Error en POST /api/cattle:", error)
+    return NextResponse.json({ success: false, error: "Error al insertar animal" }, { status: 500 })
   }
 }
