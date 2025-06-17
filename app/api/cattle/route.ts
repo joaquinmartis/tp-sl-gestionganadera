@@ -106,16 +106,60 @@ export async function GET(request: NextRequest) {
 }
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const client = await clientPromise
-    const db = client.db()
-    const collection = db.collection("cattle")
+    const body = await request.json();
+    // Validar campos requeridos (id ya no es requerido)
+    const requiredFields = [
+      "name",
+      "description",
+      "imageUrl",
+      "position",
+      "connected",
+      "zoneId",
+    ];
+    for (const field of requiredFields) {
+      if (
+        body[field] === undefined ||
+        body[field] === null ||
+        (typeof body[field] === "string" && body[field].trim() === "") ||
+        (field === "position" &&
+          (!Array.isArray(body.position) || body.position.length !== 2))
+      ) {
+        return NextResponse.json(
+          { success: false, error: `El campo '${field}' es requerido.` },
+          { status: 400 }
+        );
+      }
+    }
 
-    await collection.insertOne(body)
+    // Generar id automáticamente (por ejemplo, usando Date.now y Math.random)
+    const generatedId = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
 
-    return NextResponse.json({ success: true, message: "Animal insertado correctamente" }, { status: 201 })
+    // Validar y construir el objeto con el formato requerido
+    const newCow = {
+      id: generatedId,
+      name: body.name,
+      description: body.description,
+      imageUrl: body.imageUrl,
+      position: [Number(body.position[0]), Number(body.position[1])],
+      connected: Boolean(body.connected),
+      zoneId: body.zoneId,
+    };
+
+    const client = await clientPromise;
+    const db = client.db();
+    const collection = db.collection("cattle");
+
+    await collection.insertOne(newCow);
+
+    return NextResponse.json(
+      { success: true, message: "Animal insertado correctamente" },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error("Error en POST /api/cattle:", error)
-    return NextResponse.json({ success: false, error: "Error al insertar animal" }, { status: 500 })
+    console.error("Error al insertar ganado:", error);
+    return NextResponse.json(
+      { success: false, error: "Error al insertar ganado" },
+      { status: 500 }
+    );
   }
 }
