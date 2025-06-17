@@ -52,16 +52,33 @@ export function CattleProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const mockZones = generateMockZones()
-    const mockCattle = generateMockCattle(mockZones)
+  const fetchData = async () => {
+    try {
+      // 1. Obtener zonas (si aún no las guardaste en Mongo, usá las mockeadas)
+      const mockZones = generateMockZones()
+      setZones(mockZones)
 
-    setZones(mockZones)
-    setCattle(mockCattle)
-    setLoading(false)
+      // 2. Obtener ganado desde la API
+      const res = await fetch("/api/cattle")
+      const data = await res.json()
 
-    // Reproducir sonido de bienvenida
-    const audio = new Audio("/moo.mp3")
-    audio.play().catch((e) => console.log("Error reproduciendo audio:", e))
+      if (data.success) {
+        setCattle(data.data)
+      } else {
+        console.error("Error al obtener el ganado:", data.error)
+      }
+
+      // 3. Reproducir sonido de bienvenida
+      const audio = new Audio("/moo.mp3")
+      audio.play().catch((e) => console.log("Error reproduciendo audio:", e))
+    } catch (error) {
+      console.error("Error general en la carga de datos:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+    fetchData()
   }, [isAuthenticated])
 
   // Simular movimiento de vacas solo si el usuario está autenticado
