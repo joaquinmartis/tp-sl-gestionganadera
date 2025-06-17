@@ -13,15 +13,23 @@ if (!process.env.MONGODB_URI) {
 if (process.env.NODE_ENV === "development") {
   // @ts-ignore
   if (!global._mongoClientPromise) {
+    console.log("🔌 Conectando a MongoDB (dev)...")
     client = new MongoClient(uri, options)
     // @ts-ignore
-    global._mongoClientPromise = client.connect()
+    global._mongoClientPromise = client.connect().then((client) => {
+      console.log("✅ Conectado a MongoDB (dev)")
+      return client
+    })
   }
   // @ts-ignore
   clientPromise = global._mongoClientPromise
 } else {
+  console.log("🔌 Conectando a MongoDB (prod)...")
   client = new MongoClient(uri, options)
-  clientPromise = client.connect()
+  clientPromise = client.connect().then((client) => {
+    console.log("✅ Conectado a MongoDB (prod)")
+    return client
+  })
 }
 
 export default clientPromise

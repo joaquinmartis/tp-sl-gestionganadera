@@ -12,6 +12,8 @@ services:
       - "3000:3000"
     container_name: nextjs-app
     restart: always
+    env_file:
+    - .env
     develop:
       watch:
         - action: rebuild
