@@ -181,7 +181,7 @@ export function CattleProvider({ children }: { children: ReactNode }) {
   const disconnectionInterval = setInterval(() => {
     setCattle((prevCattle) => {
       const updated = prevCattle.map((cow) => {
-        if (cow.connected && Math.random() < 0.1) {
+        if (cow.connected && Math.random() < 0.05) {
         toast({
             title: "Desconexión detectada",
             description: `${cow.name} se ha desconectado del sistema.`,
@@ -200,7 +200,7 @@ export function CattleProvider({ children }: { children: ReactNode }) {
               description: `${cow.name} volvió a conectarse.`,
               variant: "default",
             })
-          }, 10000)
+          }, 15000)
 
           return { ...cow, connected: false }
         }
@@ -210,7 +210,7 @@ export function CattleProvider({ children }: { children: ReactNode }) {
 
       return updated
     })
-  }, 30000) // cada 30 segundos
+  }, 60000) // cada 30 segundos
 
   return () => clearInterval(disconnectionInterval)
 }, [loading, isAuthenticated, toast])
