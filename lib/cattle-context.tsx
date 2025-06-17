@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { generateMockCattle, generateMockZones } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
 
 export interface Cattle {
@@ -54,8 +53,6 @@ export function CattleProvider({ children }: { children: ReactNode }) {
 
   const fetchData = async () => {
     try {
-      // 1. Obtener zonas (si aún no las guardaste en Mongo, usá las mockeadas)
-
       const resZones = await fetch("/api/zones")
       const dataZones = await resZones.json()
       if (dataZones.success) {
@@ -151,7 +148,7 @@ export function CattleProvider({ children }: { children: ReactNode }) {
             setTimeout(() => {
               toast({
                 title: "¡Alerta de seguridad!",
-                description: `${cow.name} ha salido de los límites de la granja`,
+                description: `${cow.name} se tomó el palo de la granja`,
                 variant: "destructive",
               })
             }, 0)
@@ -159,7 +156,7 @@ export function CattleProvider({ children }: { children: ReactNode }) {
             // Enviar notificación push si está permitido
             if ("Notification" in window && Notification.permission === "granted") {
               new Notification("¡Alerta de seguridad!", {
-                body: `${cow.name} ha salido de los límites de la granja`,
+                body: `${cow.name} se tomó el palo de la granja`,
                 icon: "/cow-icon.png",
               })
             }
@@ -179,25 +176,45 @@ export function CattleProvider({ children }: { children: ReactNode }) {
 
   // Simular desconexiones aleatorias solo si el usuario está autenticado
   useEffect(() => {
-    if (loading || !isAuthenticated) return
+  if (loading || !isAuthenticated) return
 
-    const disconnectionInterval = setInterval(() => {
-      setCattle((prevCattle) => {
-        return prevCattle.map((cow) => {
-          // 10% de probabilidad de cambiar el estado de conexión
-          if (Math.random() < 0.1) {
-            return {
-              ...cow,
-              connected: !cow.connected,
-            }
-          }
-          return cow
-        })
+  const disconnectionInterval = setInterval(() => {
+    setCattle((prevCattle) => {
+      const updated = prevCattle.map((cow) => {
+        if (cow.connected && Math.random() < 0.1) {
+        toast({
+            title: "Desconexión detectada",
+            description: `${cow.name} se ha desconectado del sistema.`,
+            variant: "destructive",
+          })
+          // Reprogramar reconexión en 10 segundos
+          setTimeout(() => {
+            setCattle((current) =>
+              current.map((c) =>
+                c.id === cow.id ? { ...c, connected: true } : c
+              )
+            )
+            // Mostrar toast de reconexión
+            toast({
+              title: "Re-conexión exitosa",
+              description: `${cow.name} volvió a conectarse.`,
+              variant: "default",
+            })
+          }, 10000)
+
+          return { ...cow, connected: false }
+        }
+
+        return cow
       })
-    }, 30000) // Cada 30 segundos
 
-    return () => clearInterval(disconnectionInterval)
-  }, [loading, isAuthenticated])
+      return updated
+    })
+  }, 30000) // cada 30 segundos
+
+  return () => clearInterval(disconnectionInterval)
+}, [loading, isAuthenticated, toast])
+
 
   // Calcular cantidad de vacas conectadas
   const connectedCattle = cattle.filter((cow) => cow.connected).length

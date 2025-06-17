@@ -39,7 +39,7 @@ export default function CattleList() {
     ignoreLocation: true,
   })
 
-let filteredCattle = searchTerm
+  let filteredCattle = searchTerm
   ? fuse.search(searchTerm).map(result => result.item)
   : cattle
 
