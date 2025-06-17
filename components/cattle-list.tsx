@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { useCattle } from "@/lib/cattle-context"
+import Fuse from "fuse.js"
 
 // Función para calcular la distancia entre dos puntos (Haversine formula)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -30,16 +31,17 @@ export default function CattleList() {
   const [radius, setRadius] = useState("")
   const [isLocationSearchActive, setIsLocationSearchActive] = useState(false)
 
-  // Filtrar vacas por término de búsqueda
-  let filteredCattle = cattle.filter(
-    (cow) =>
-      cow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (cow.zoneId &&
-        zones
-          .find((z) => z.id === cow.zoneId)
-          ?.name.toLowerCase()
-          .includes(searchTerm.toLowerCase())),
-  )
+  // Filtrar vacas por término de búsqueda usando FUSE
+
+  const fuse = new Fuse(cattle, {
+    keys: ["name"],
+    threshold: 0.3,         // sensibilidad a errores
+    ignoreLocation: true,
+  })
+
+let filteredCattle = searchTerm
+  ? fuse.search(searchTerm).map(result => result.item)
+  : cattle
 
   // Filtrar por ubicación si la búsqueda avanzada está activa
   if (isLocationSearchActive && latitude && longitude && radius) {

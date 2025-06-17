@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import clientPromise from "@/lib/mongodb"
 
 /**
  * GET /api/dashboard
@@ -6,11 +7,18 @@ import { NextResponse } from "next/server"
  */
 export async function GET() {
   try {
-    // Simulación de datos para el dashboard
+    const client = await clientPromise
+    const db = client.db()
+    const totalCattle = await db.collection("cattle").countDocuments()
+    const connectedCattle = await db
+      .collection("cattle")
+      .countDocuments({ connected: true })
+    const totalZones = await db.collection("zones").countDocuments()
+
     const dashboardData = {
-      totalCattle: 20,
-      connectedCattle: 18,
-      totalZones: 7,
+      totalCattle,
+      connectedCattle,
+      totalZones,
       alerts: 0,
       lastUpdated: new Date().toISOString(),
     }
