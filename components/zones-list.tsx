@@ -9,10 +9,16 @@ interface ZonesListProps {
 export default function ZonesList({ onItemClick }: ZonesListProps) {
   const { zones, cattle, selectedZoneId, setSelectedZoneId } = useCattle()
 
-  // Contar vacas por zona
+  // Contar vacas por zona (usando los datos actuales filtrados)
   const cattleCountByZone = zones.reduce(
     (acc, zone) => {
-      acc[zone.id] = cattle.filter((cow) => cow.zoneId === zone.id).length
+      if (selectedZoneId === zone.id) {
+        // Si esta zona está seleccionada, mostrar el conteo de las vacas filtradas
+        acc[zone.id] = cattle.length
+      } else {
+        // Para zonas no seleccionadas, mostrar 0 o hacer una consulta separada
+        acc[zone.id] = 0
+      }
       return acc
     },
     {} as Record<string, number>,
@@ -36,7 +42,7 @@ export default function ZonesList({ onItemClick }: ZonesListProps) {
             <span className="truncate">{zone.name}</span>
           </div>
           <span className="text-xs font-medium bg-gray-100 rounded-full px-2 py-0.5">
-            {cattleCountByZone[zone.id] || 0}
+            {selectedZoneId === zone.id ? cattle.length : "..."}
           </span>
         </button>
       ))}

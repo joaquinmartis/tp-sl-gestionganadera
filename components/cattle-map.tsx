@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, Rectangle, useMap } from "react
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { useCattle, type Cattle } from "@/lib/cattle-context"
+import ZoneDrawer from "./zone-drawer"
 
 // Icono personalizado para las vacas
 const cowIcon = new L.Icon({
@@ -50,7 +51,7 @@ export default function CattleMap() {
 
   return (
     <MapContainer
-      center={[40.7128, -74.006]} // Coordenadas iniciales
+      center={[-43.2534, -65.309]} // Coordenadas iniciales
       zoom={14}
       style={{ height: "100%", width: "100%" }}
       className="z-0" // Asegurar que el mapa tenga un z-index bajo
@@ -59,6 +60,9 @@ export default function CattleMap() {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      {/* Componente para dibujar zonas personalizadas */}
+      <ZoneDrawer />
 
       {/* Renderizar zonas */}
       {zones.map((zone) => (

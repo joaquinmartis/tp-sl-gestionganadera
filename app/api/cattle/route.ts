@@ -4,7 +4,7 @@ import clientPromise from "@/lib/mongodb";
 
 /**
  * GET /api/cattle
- * Obtiene la lista de ganado con opciones de filtrado
+ * Obtiene la lista de ganado con opciones de filtrado usando GeoSearch
  */
 export async function GET(request: NextRequest) {
   try {
@@ -13,83 +13,56 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const zoneId = searchParams.get("zoneId");
     const connected = searchParams.get("connected");
-    const lat = searchParams.get("lat")
-      ? Number.parseFloat(searchParams.get("lat") || "")
-      : null;
-    const lng = searchParams.get("lng")
-      ? Number.parseFloat(searchParams.get("lng") || "")
-      : null;
-    const radius = searchParams.get("radius")
-      ? Number.parseFloat(searchParams.get("radius") || "")
-      : null;
 
     const client = await clientPromise
     const db = client.db()
     const collection = db.collection("cattle")
 
-    let cattle = await collection.find().toArray()
-    // Simulación de datos de ganado
-
-    // Función para calcular la distancia entre dos puntos (Haversine formula)
-    function calculateDistance(
-      lat1: number,
-      lon1: number,
-      lat2: number,
-      lon2: number
-    ): number {
-      const R = 6371; // Radio de la Tierra en km
-      const dLat = ((lat2 - lat1) * Math.PI) / 180;
-      const dLon = ((lon2 - lon1) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((lat1 * Math.PI) / 180) *
-          Math.cos((lat2 * Math.PI) / 180) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c; // Distancia en km
-    }
-
-    // Aplicar filtros
-    let filteredCattle = cattle;
+    // Construir filtros para la consulta
+    const filters: any = {}
 
     // Filtrar por término de búsqueda
     if (search) {
-      filteredCattle = filteredCattle.filter((cow) =>
-        cow.name.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    // Filtrar por zona
-    if (zoneId) {
-      filteredCattle = filteredCattle.filter((cow) => cow.zoneId === zoneId);
+      filters.name = { $regex: search, $options: 'i' }
     }
 
     // Filtrar por estado de conexión
     if (connected !== null) {
-      const isConnected = connected === "true";
-      filteredCattle = filteredCattle.filter(
-        (cow) => cow.connected === isConnected
-      );
+      filters.connected = connected === "true"
     }
 
-    // Filtrar por ubicación (coordenadas y radio)
-    if (lat !== null && lng !== null && radius !== null) {
-      filteredCattle = filteredCattle.filter((cow) => {
-        const distance = calculateDistance(
-          lat,
-          lng,
-          cow.position[0],
-          cow.position[1]
-        );
-        return distance <= radius;
-      });
+    // Filtrar por zona usando geolocalización
+    if (zoneId) {
+      // Obtener la zona para obtener sus bounds
+      const zonesCollection = db.collection("zones");
+      const zona = await zonesCollection.findOne({ id: zoneId });
+      
+      console.log("Zona encontrada:", zona);
+      
+      if (zona && zona.bounds) {
+        console.log("Bounds de la zona:", zona.bounds);
+        
+        filters.position = {
+          $geoWithin: {
+            $geometry: zona.bounds
+          }
+        };
+        
+        console.log("Filtro aplicado:", filters);
+      } else {
+        console.log("Zona no encontrada o sin bounds:", zoneId);
+      }
     }
+
+    // Consulta a la base de datos con todos los filtros aplicados
+    console.log("Filtros finales:", filters);
+    const cattle = await collection.find(filters).toArray()
+    console.log("Resultados encontrados:", cattle.length);
 
     return NextResponse.json(
       {
         success: true,
-        data: filteredCattle,
+        data: cattle,
       },
       { status: 200 }
     );
@@ -104,6 +77,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

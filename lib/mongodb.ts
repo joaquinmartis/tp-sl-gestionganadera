@@ -11,6 +11,26 @@ if (!process.env.MONGODB_URI) {
   throw new Error("Falta la variable MONGODB_URI en .env.local")
 }
 
+async function createGeospatialIndexes(db: any) {
+  try {
+    // Crear índice geoespacial para cattle (posición 2dsphere)
+    await db.collection("cattle").createIndex(
+      { position: "2dsphere" },
+      { background: true }
+    )
+    console.log("✅ Índice geoespacial creado para cattle")
+
+    // Crear índice geoespacial para zones (bounds 2dsphere)
+    await db.collection("zones").createIndex(
+      { bounds: "2dsphere" },
+      { background: true }
+    )
+    console.log("✅ Índice geoespacial creado para zones")
+  } catch (error) {
+    console.log("Los índices geoespaciales ya existen o hubo un error:", error)
+  }
+}
+
 async function runSeedIfNeeded(db: any) {
   const zonesCount = await db.collection("zones").countDocuments()
   if (zonesCount === 0) {
@@ -23,6 +43,9 @@ async function runSeedIfNeeded(db: any) {
     console.log("🌱 Insertando vacas iniciales...")
     await db.collection("cattle").insertMany(generateMockCattle(generateMockZones()))
   }
+
+  // Crear índices geoespaciales después de insertar datos
+  await createGeospatialIndexes(db)
 }
 
 if (process.env.NODE_ENV === "development") {

@@ -34,9 +34,10 @@ export default function CattleList() {
   // Filtrar vacas por término de búsqueda usando FUSE
 
   const fuse = new Fuse(cattle, {
-    keys: ["name"],
+    keys: ["name", "description"],
     threshold: 0.3,         // sensibilidad a errores
     ignoreLocation: true,
+    isCaseSensitive: false,
   })
 
   let filteredCattle = searchTerm

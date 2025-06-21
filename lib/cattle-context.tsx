@@ -31,6 +31,7 @@ interface CattleContextType {
   setSelectedCattleId: (id: string | null) => void
   selectedZoneId: string | null
   setSelectedZoneId: (id: string | null) => void
+  getCattleByZone: (zoneId: string | null) => Promise<Cattle[]>
 }
 
 const CattleContext = createContext<CattleContextType | undefined>(undefined)
@@ -43,6 +44,21 @@ export function CattleProvider({ children }: { children: ReactNode }) {
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null)
   const { toast } = useToast()
   const { isAuthenticated } = useAuth()
+
+  // Función para obtener ganado filtrado por zona usando GeoSearch
+  const getCattleByZone = async (zoneId: string | null) => {
+    if (!zoneId) {
+      // Si no hay zona seleccionada, obtener todas las vacas
+      const res = await fetch("/api/cattle")
+      const data = await res.json()
+      return data.success ? data.data : []
+    }
+
+    // Obtener vacas de la zona específica usando GeoSearch
+    const res = await fetch(`/api/cattle?zoneId=${zoneId}`)
+    const data = await res.json()
+    return data.success ? data.data : []
+  }
 
   // Inicializar datos solo si el usuario está autenticado
   useEffect(() => {
@@ -82,6 +98,18 @@ export function CattleProvider({ children }: { children: ReactNode }) {
 
     fetchData()
   }, [isAuthenticated])
+
+  // Actualizar ganado cuando cambie la zona seleccionada
+  useEffect(() => {
+    if (!isAuthenticated || loading) return
+
+    const updateCattleByZone = async () => {
+      const zoneCattle = await getCattleByZone(selectedZoneId)
+      setCattle(zoneCattle)
+    }
+
+    updateCattleByZone()
+  }, [selectedZoneId, isAuthenticated, loading])
 
   // Simular movimiento de vacas solo si el usuario está autenticado
   useEffect(() => {
@@ -230,6 +258,7 @@ export function CattleProvider({ children }: { children: ReactNode }) {
         setSelectedCattleId,
         selectedZoneId,
         setSelectedZoneId,
+        getCattleByZone,
       }}
     >
       {children}

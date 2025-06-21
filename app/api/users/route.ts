@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       name,
       email,
       password: passwordHash,
-      role: "Operador",
+      role: "Operador", // !!!?????
       createdAt: new Date(),
     };
     const result = await usersCollection.insertOne(newUser);

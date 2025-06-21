@@ -61,6 +61,8 @@ const COW_IMAGES = [
   "/placeholder.svg?height=200&width=200",
 ]
 
+// ... existing code ...
+
 export function generateMockZones(): Zone[] {
   // Crear zona general de la granja
   const farmZone: Zone = {
@@ -166,7 +168,7 @@ export function generateMockCattle(zones: Zone[]): Cattle[] {
       }
     }
 
-    // Crear vaca
+    // Crear vaca con formato GeoJSON
     cattle.push({
       id: `cow-${i + 1}`,
       name: COW_NAMES[i % COW_NAMES.length],
@@ -179,4 +181,4 @@ export function generateMockCattle(zones: Zone[]): Cattle[] {
   }
 
   return cattle
-}
+} 
