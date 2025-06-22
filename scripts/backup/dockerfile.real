@@ -1,11 +1,25 @@
+# Usa la imagen oficial de Mongo como base
 FROM mongo:latest
 
+# Crea carpeta para backups (por si no existe en host)
+RUN mkdir -p /backups
+
+# Copia el script y le da permisos
 COPY backup.sh /backup.sh
 RUN chmod +x /backup.sh
 
-# Ejecutar el script todos los días a las 2 AM
-RUN echo "0 2 * * * /backup.sh >> /var/log/backup.log 2>&1" > /etc/cron.d/mongo-backup
-RUN chmod 0644 /etc/cron.d/mongo-backup && \
-    crontab /etc/cron.d/mongo-backup
+# Instala cron
+RUN apt-get update && apt-get install -y cron
 
+# Copia el crontab
+COPY crontab /etc/cron.d/backup-cron
+
+# Da permisos al crontab y lo registra
+RUN chmod 0644 /etc/cron.d/backup-cron && \
+    crontab /etc/cron.d/backup-cron
+
+# Crea volumen donde se guardarán los backups
+VOLUME ["/backups"]
+
+# Ejecuta cron en foreground (para que el contenedor no se cierre)
 CMD ["cron", "-f"]

@@ -1,35 +1,64 @@
 #!/bin/bash
 set -e
 
-DATE=$(date +%Y-%m-%d)
 BACKUP_PATH="/backups"
+URI="$MONGO_URI"
 
-# 🗓 Día de la semana (1 = lunes, 7 = domingo)
-DAY_OF_WEEK=$(date +%u)
+# Tiempos en segundos
+ONE_DAY=86400
+ONE_WEEK=604800
+ONE_MONTH=2592000
 
-# 🗓 Día del mes (01 = primero de mes)
-DAY_OF_MONTH=$(date +%d)
+mkdir -p "$BACKUP_PATH/daily"
+mkdir -p "$BACKUP_PATH/weekly"
+mkdir -p "$BACKUP_PATH/monthly"
 
-# 1. BACKUP DIARIO → siempre
-DAILY_DIR="$BACKUP_PATH/daily/$DATE"
-mongodump --uri="$MONGO_URI" --out="$DAILY_DIR"
-echo "✅ Backup diario creado en: $DAILY_DIR"
+timestamp() {
+  date +%Y-%m-%d_%H-%M-%S
+}
 
-# Mantener solo los 7 más recientes
-ls -1dt "$BACKUP_PATH/daily/"* | tail -n +8 | xargs -r rm -rf
+create_backup() {
+  local type=$1
+  local dir="$BACKUP_PATH/$type/$(timestamp)"
+  mongodump --uri="$URI" --out="$dir"
+  echo "✅ Backup $type creado: $dir"
+}
 
-# 2. BACKUP SEMANAL → si es domingo
-if [ "$DAY_OF_WEEK" -eq 7 ]; then
-  WEEKLY_DIR="$BACKUP_PATH/weekly/$DATE"
-  mongodump --uri="$MONGO_URI" --out="$WEEKLY_DIR"
-  echo "✅ Backup semanal creado en: $WEEKLY_DIR"
-  ls -1dt "$BACKUP_PATH/weekly/"* | tail -n +5 | xargs -r rm -rf
+get_last_age_seconds() {
+  local type=$1
+  local latest=$(find "$BACKUP_PATH/$type" -mindepth 1 -maxdepth 1 -type d -printf "%T@ %p\n" | sort -nr | head -n 1 | cut -d' ' -f2-)
+  if [ -z "$latest" ]; then
+    echo 9999999
+    return
+  fi
+  local created=$(stat -c %Y "$latest")
+  local now=$(date +%s)
+  echo $((now - created))
+}
+
+# Backup diario
+daily_age=$(get_last_age_seconds "daily")
+if [ "$daily_age" -ge $ONE_DAY ]; then
+  create_backup "daily"
+  ls -1dt "$BACKUP_PATH/daily/"* | tail -n +8 | xargs -r rm -rf
+else
+  echo "⏳ Último backup diario fue hace $daily_age s. No se crea nuevo."
 fi
 
-# 3. BACKUP MENSUAL → si es el primer día del mes
-if [ "$DAY_OF_MONTH" = "01" ]; then
-  MONTHLY_DIR="$BACKUP_PATH/monthly/$DATE"
-  mongodump --uri="$MONGO_URI" --out="$MONTHLY_DIR"
-  echo "✅ Backup mensual creado en: $MONTHLY_DIR"
+# Backup semanal
+weekly_age=$(get_last_age_seconds "weekly")
+if [ "$weekly_age" -ge $ONE_WEEK ]; then
+  create_backup "weekly"
+  ls -1dt "$BACKUP_PATH/weekly/"* | tail -n +5 | xargs -r rm -rf
+else
+  echo "⏳ Último backup semanal fue hace $weekly_age s. No se crea nuevo."
+fi
+
+# Backup mensual
+monthly_age=$(get_last_age_seconds "monthly")
+if [ "$monthly_age" -ge $ONE_MONTH ]; then
+  create_backup "monthly"
   ls -1dt "$BACKUP_PATH/monthly/"* | tail -n +13 | xargs -r rm -rf
+else
+  echo "⏳ Último backup mensual fue hace $monthly_age s. No se crea nuevo."
 fi
