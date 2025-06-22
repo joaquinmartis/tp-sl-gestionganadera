@@ -1,0 +1,13 @@
+FROM mongo:latest
+
+# Copiar el script de backup al contenedor
+COPY backup.sh /backup.sh
+
+# Dar permisos de ejecución
+RUN chmod +x /backup.sh
+
+# Declarar volumen para persistencia de backups
+VOLUME ["/backups"]
+
+# Ejecutar el backup cada 10 segundos
+CMD ["sh", "-c", "while true; do /backup.sh; sleep 10; done"]
