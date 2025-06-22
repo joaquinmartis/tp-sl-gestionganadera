@@ -1,29 +1,66 @@
 #!/bin/bash
 set -e
 
-NOW=$(date +%Y-%m-%d_%H-%M-%S)
 BACKUP_PATH="/backups"
+URI="$MONGO_URI"
 
-# 1. BACKUP DIARIO (cada 10s)
-DAILY_DIR="$BACKUP_PATH/daily/$NOW"
-mongodump --uri="$MONGO_URI" --out="$DAILY_DIR"
-echo "✅ Backup diario: $NOW"
+# Crear directorios si no existen
+mkdir -p "$BACKUP_PATH/daily"
+mkdir -p "$BACKUP_PATH/weekly"
+mkdir -p "$BACKUP_PATH/monthly"
 
-# Mantener solo 7 diarios
+timestamp() {
+  date +%Y-%m-%d_%H-%M-%S
+}
+
+create_backup() {
+  local type=$1
+  local dir="$BACKUP_PATH/$type/$(timestamp)"
+  mongodump --uri="$URI" --out="$dir"
+  echo "✅ Backup $type creado: $dir"
+}
+
+check_and_seed() {
+  local type=$1
+  local limit=$2
+  local files=$(ls -1 "$BACKUP_PATH/$type" 2>/dev/null | wc -l)
+  if [ "$files" -eq 0 ]; then
+    echo "🌱 No hay backups $type, creando uno..."
+    create_backup "$type"
+  fi
+}
+
+get_newest_age_seconds() {
+  local type=$1
+  local newest=$(find "$BACKUP_PATH/$type" -mindepth 1 -maxdepth 1 -type d -printf "%T@ %p\n" | sort -nr | head -n 1 | cut -d' ' -f2-)
+  if [ -z "$newest" ]; then
+    echo 99999
+    return
+  fi
+  local created=$(stat -c %Y "$newest")
+  local now=$(date +%s)
+  echo $((now - created))
+}
+
+
+# 1. Backup diario (siempre)
+create_backup "daily"
 ls -1dt "$BACKUP_PATH/daily/"* | tail -n +8 | xargs -r rm -rf
 
-# 2. BACKUP SEMANAL (cada 30s simulación)
-if [ $(( $(date +%S) % 30 )) -eq 0 ]; then
-  WEEKLY_DIR="$BACKUP_PATH/weekly/$NOW"
-  mongodump --uri="$MONGO_URI" --out="$WEEKLY_DIR"
-  echo "✅ Backup semanal: $NOW"
+# 2. Inicializar si están vacíos
+check_and_seed "weekly" 4
+check_and_seed "monthly" 12
+
+# 3. Backup semanal si el más viejo tiene +30s
+weekly_age=$(get_newest_age_seconds "weekly")
+if [ "$weekly_age" -ge 30 ]; then
+  create_backup "weekly"
   ls -1dt "$BACKUP_PATH/weekly/"* | tail -n +5 | xargs -r rm -rf
 fi
 
-# 3. BACKUP MENSUAL (cada 60s simulación)
-if [ "$(date +%S)" = "00" ]; then
-  MONTHLY_DIR="$BACKUP_PATH/monthly/$NOW"
-  mongodump --uri="$MONGO_URI" --out="$MONTHLY_DIR"
-  echo "✅ Backup mensual: $NOW"
+# 4. Backup mensual si el más viejo tiene +60s
+monthly_age=$(get_newest_age_seconds "monthly")
+if [ "$monthly_age" -ge 60 ]; then
+  create_backup "monthly"
   ls -1dt "$BACKUP_PATH/monthly/"* | tail -n +13 | xargs -r rm -rf
 fi
