@@ -9,7 +9,10 @@ export interface Cattle {
   name: string
   description: string
   imageUrl: string
-  position: [number, number]
+  position: {
+    type: "Point"
+    coordinates: [number, number]
+  }
   connected: boolean
   zoneId: string | null
 }
@@ -18,7 +21,18 @@ export interface Zone {
   id: string
   name: string
   description: string
-  bounds: [[number, number], [number, number]] // [[lat1, lng1], [lat2, lng2]]
+  bounds: {
+    type: "Polygon"
+    coordinates: [
+      [
+        [number, number],
+        [number, number],
+        [number, number],
+        [number, number],
+        [number, number]
+      ]
+    ]
+  }
   color: string
 }
 
@@ -123,15 +137,15 @@ export function CattleProvider({ children }: { children: ReactNode }) {
 
           // Obtener los límites de la granja (primera zona)
           const farmZone = zones[0]
-          const [[minLat, minLng], [maxLat, maxLng]] = farmZone.bounds
+          const [[minLat, minLng], [maxLat, maxLng]] = farmZone.bounds.coordinates[0]
 
           // Movimiento aleatorio pequeño
           const latChange = (Math.random() - 0.5) * 0.001
           const lngChange = (Math.random() - 0.5) * 0.001
 
           // Calcular nueva posición
-          let newLat = cow.position[0] + latChange
-          let newLng = cow.position[1] + lngChange
+          let newLat = cow.position.coordinates[0] + latChange
+          let newLng = cow.position.coordinates[1] + lngChange
 
           // Verificar si la nueva posición estaría fuera de la granja
           const wouldBeOutside = newLat < minLat || newLat > maxLat || newLng < minLng || newLng > maxLng
@@ -150,7 +164,7 @@ export function CattleProvider({ children }: { children: ReactNode }) {
           let newZoneId: string | null = null
 
           for (const zone of zones) {
-            const [[zMinLat, zMinLng], [zMaxLat, zMaxLng]] = zone.bounds
+            const [[zMinLat, zMinLng], [zMaxLat, zMaxLng]] = zone.bounds.coordinates[0]
 
             if (
               newPosition[0] >= zMinLat &&
@@ -192,7 +206,10 @@ export function CattleProvider({ children }: { children: ReactNode }) {
 
           return {
             ...cow,
-            position: newPosition,
+            position: {
+              type: "Point",
+              coordinates: newPosition,
+            },
             zoneId: newZoneId,
           }
         })
@@ -246,6 +263,8 @@ export function CattleProvider({ children }: { children: ReactNode }) {
 
   // Calcular cantidad de vacas conectadas
   const connectedCattle = cattle.filter((cow) => cow.connected).length
+
+  console.log("Zonas recibidas:", zones);
 
   return (
     <CattleContext.Provider

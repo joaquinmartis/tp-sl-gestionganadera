@@ -14,7 +14,60 @@ const cowIcon = new L.Icon({
   iconAnchor: [16, 16],
   popupAnchor: [0, -16],
 })
+// Tipos para GeoJSON
+interface GeoJSONPolygon {
+  type: "Polygon";
+  coordinates: number[][][];
+}
 
+interface GeoJSONFeature {
+  type: "Feature";
+  geometry: GeoJSONPolygon;
+  properties?: any;
+}
+
+type LeafletBounds = [[number, number], [number, number]];
+
+// Función de conversión
+function geoJsonToBounds(geoJson: GeoJSONPolygon | GeoJSONFeature): LeafletBounds | null {
+  try {
+    const geometry = 'geometry' in geoJson ? geoJson.geometry : geoJson;
+    
+    if (geometry.type !== 'Polygon' || !geometry.coordinates || !geometry.coordinates[0]) {
+      console.warn('GeoJSON inválido o no es un Polygon');
+      return null;
+    }
+
+    const coordinates = geometry.coordinates[0];
+    
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+    let minLng = Infinity;
+    let maxLng = -Infinity;
+
+    coordinates.forEach(([lng, lat]) => {
+      if (typeof lng !== 'number' || typeof lat !== 'number') return;
+      
+      minLat = Math.min(minLat, lat);
+      maxLat = Math.max(maxLat, lat);
+      minLng = Math.min(minLng, lng);
+      maxLng = Math.max(maxLng, lng);
+    });
+
+    if (!isFinite(minLat) || !isFinite(maxLat) || !isFinite(minLng) || !isFinite(maxLng)) {
+      console.warn('No se pudieron extraer coordenadas válidas del GeoJSON');
+      return null;
+    }
+
+    return [
+      [minLat, minLng],
+      [maxLat, maxLng]
+    ];
+  } catch (error) {
+    console.error('Error convirtiendo GeoJSON a bounds:', error);
+    return null;
+  }
+}
 // Componente para actualizar la vista del mapa
 function MapUpdater({ cattle, selectedCattleId }: { cattle: Cattle[]; selectedCattleId: string | null }) {
   const map = useMap()
@@ -23,7 +76,7 @@ function MapUpdater({ cattle, selectedCattleId }: { cattle: Cattle[]; selectedCa
     if (selectedCattleId) {
       const selectedCow = cattle.find((cow) => cow.id === selectedCattleId)
       if (selectedCow) {
-        map.setView(selectedCow.position, 16)
+        map.setView([selectedCow.position.coordinates[1], selectedCow.position.coordinates[0]], 16)
       }
     }
 
@@ -65,10 +118,20 @@ export default function CattleMap() {
       <ZoneDrawer />
 
       {/* Renderizar zonas */}
-      {zones.map((zone) => (
+      {zones.map((zone) => {
+      // Convertir GeoJSON bounds a formato Leaflet
+      const leafletBounds = geoJsonToBounds(zone.bounds);
+      
+      // Si no se puede convertir, skip esta zona
+      if (!leafletBounds) {
+        console.warn(`Zona ${zone.name} tiene bounds inválidos:`, zone.bounds);
+        return null;
+      }
+
+      return(
         <Rectangle
           key={zone.id}
-          bounds={zone.bounds as L.LatLngBoundsExpression}
+          bounds={leafletBounds as L.LatLngBoundsExpression}
           pathOptions={{
             color: zone.color,
             weight: 2,
@@ -82,13 +145,13 @@ export default function CattleMap() {
             </div>
           </Popup>
         </Rectangle>
-      ))}
+      )})}
 
       {/* Renderizar vacas */}
       {cattle.map((cow) => (
         <Marker
           key={cow.id}
-          position={cow.position}
+          position={[cow.position.coordinates[1], cow.position.coordinates[0]]}
           icon={cowIcon}
           opacity={cow.connected ? 1 : 0.5}
           eventHandlers={{

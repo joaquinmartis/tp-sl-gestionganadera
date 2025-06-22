@@ -8,7 +8,7 @@ BACKUP_PATH="/backups"
 DAILY_DIR="$BACKUP_PATH/daily/$NOW"
 mongodump --uri="$MONGO_URI" --out="$DAILY_DIR"
 echo "✅ Backup diario: $NOW"
-
+mkdir -p "$BACKUP_PATH/daily" "$BACKUP_PATH/weekly" "$BACKUP_PATH/monthly"
 # Mantener solo 7 diarios
 ls -1dt "$BACKUP_PATH/daily/"* | tail -n +8 | xargs -r rm -rf
 
