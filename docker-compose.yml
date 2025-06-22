@@ -13,7 +13,7 @@ services:
     container_name: nextjs-app
     restart: always
     env_file:
-    - .env
+      - .env
     develop:
       watch:
         - action: rebuild
@@ -32,5 +32,17 @@ services:
       - "27017:27017"
     volumes:
       - gestionganadera:/data/db
+
+  backup:
+    build:
+      context: ./scripts/backup
+    container_name: mongo-backup
+    environment:
+      - MONGO_URI=${MONGODB_URI}
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      - mongo
+
 volumes:
   gestionganadera:
