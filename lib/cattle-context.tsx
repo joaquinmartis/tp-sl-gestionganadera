@@ -137,15 +137,24 @@ export function CattleProvider({ children }: { children: ReactNode }) {
 
           // Obtener los límites de la granja (primera zona)
           const farmZone = zones[0]
-          const [[minLat, minLng], [maxLat, maxLng]] = farmZone.bounds.coordinates[0]
+          const coordinates = farmZone.bounds.coordinates[0]
+          const lngs = coordinates.map(coord => coord[0])
+          const lats = coordinates.map(coord => coord[1])
 
+          const minLng = Math.min(...lngs)
+          const maxLng = Math.max(...lngs)
+          const minLat = Math.min(...lats)
+          const maxLat = Math.max(...lats)
           // Movimiento aleatorio pequeño
           const latChange = (Math.random() - 0.5) * 0.001
           const lngChange = (Math.random() - 0.5) * 0.001
 
           // Calcular nueva posición
-          let newLat = cow.position.coordinates[0] + latChange
-          let newLng = cow.position.coordinates[1] + lngChange
+          const currentLng = cow.position.coordinates[0]
+          const currentLat = cow.position.coordinates[1]
+
+          let newLng = currentLng + lngChange
+          let newLat = currentLat + latChange
 
           // Verificar si la nueva posición estaría fuera de la granja
           const wouldBeOutside = newLat < minLat || newLat > maxLat || newLng < minLng || newLng > maxLng
@@ -158,14 +167,20 @@ export function CattleProvider({ children }: { children: ReactNode }) {
             newLng = Math.max(minLng, Math.min(maxLng, newLng))
           }
 
-          const newPosition: [number, number] = [newLat, newLng]
+          const newPosition: [number, number] = [newLng,newLat]
 
           // Determinar en qué zona está
           let newZoneId: string | null = null
 
           for (const zone of zones) {
-            const [[zMinLat, zMinLng], [zMaxLat, zMaxLng]] = zone.bounds.coordinates[0]
+            const coordinates = zone.bounds.coordinates[0]
+            const zoneLngs = coordinates.map(coord => coord[0])
+            const zoneLats = coordinates.map(coord => coord[1])
 
+            const zMinLng = Math.min(...zoneLngs)
+            const zMaxLng = Math.max(...zoneLngs)
+            const zMinLat = Math.min(...zoneLats)
+            const zMaxLat = Math.max(...zoneLats)
             if (
               newPosition[0] >= zMinLat &&
               newPosition[0] <= zMaxLat &&
@@ -179,7 +194,7 @@ export function CattleProvider({ children }: { children: ReactNode }) {
 
           // Verificar si salió de la zona general (primera zona)
           const isOutside =
-            newPosition[0] < minLat || newPosition[0] > maxLat || newPosition[1] < minLng || newPosition[1] > maxLng
+            newPosition[1] < minLat || newPosition[1] > maxLat || newPosition[0] < minLng || newPosition[0] > maxLng
 
           if (isOutside) {
             // Alerta: vaca fuera de la granja

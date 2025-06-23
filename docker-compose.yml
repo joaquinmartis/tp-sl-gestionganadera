@@ -1,48 +1,10 @@
 services:
-  app:
-    depends_on:
-      - mongo
-    environment:
-      - MONGODB_URI=${MONGODB_URI}
-      - AUTH_URL=${AUTH_URL}
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    container_name: nextjs-app
-    restart: always
-    env_file:
-      - .env
-    develop:
-      watch:
-        - action: rebuild
-          path: ./package.json
-        - action: rebuild
-          path: ./package-lock.json
-        - action: rebuild
-          path: ./next.config.js
-        - action: sync
-          path: .
-          target: /app
-
   mongo:
     image: mongo:latest
     ports:
       - "27017:27017"
     volumes:
       - gestionganadera:/data/db
-
-  backup:
-    build:
-      context: ./scripts/backup
-    container_name: mongo-backup
-    environment:
-      - MONGO_URI=${MONGODB_URI}
-    volumes:
-      - ./backups:/backups
-    depends_on:
-      - mongo
 
 volumes:
   gestionganadera:
