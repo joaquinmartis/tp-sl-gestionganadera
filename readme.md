@@ -40,7 +40,7 @@ lib/mongodb.ts
 
 Este seed crea:
 
-- Usuario de admin
+- 👨‍💼 Usuario de admin
 - 🐄 20 vacas con ubicaciones aleatorias dentro de la granja
 - 📦 Varias zonas predeterminadas (Establos, Comederos, Pastura, etc.)
 
