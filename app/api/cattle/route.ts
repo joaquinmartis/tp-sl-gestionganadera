@@ -26,7 +26,36 @@ export async function GET(request: NextRequest) {
     const db = client.db();
     const collection = db.collection("cattle");
 
-    let cattle = await collection.find().toArray();
+    let query: any = {};
+
+    if (zoneId) {
+      const zone = await db.collection("zones").findOne({ id: zoneId });
+
+      if (zone?.geometry) {
+        query.location = {
+          $geoWithin: {
+            $geometry: zone.geometry,
+          },
+        };
+      } else {
+        // Si no hay zona válida, devolver vacío
+        return NextResponse.json({ success: true, data: [] }, { status: 200 });
+      }
+    }
+
+    if (lat !== null && lng !== null && radius !== null) {
+      query.location = {
+        $geoWithin: {
+          $centerSphere: [[lng, lat], radius / 6371], // radius en km
+        },
+      };
+    }
+
+    if (connected !== null) {
+      query.connected = connected === "true";
+    }
+
+    let cattle = await collection.find(query).toArray();
 
     // Convertir coordinates a [lat, lng] para frontend
     cattle = cattle.map((cow) => ({
@@ -40,57 +69,16 @@ export async function GET(request: NextRequest) {
       },
     }));
 
-    function calculateDistance(
-      lat1: number,
-      lon1: number,
-      lat2: number,
-      lon2: number
-    ): number {
-      const R = 6371;
-      const dLat = ((lat2 - lat1) * Math.PI) / 180;
-      const dLon = ((lon2 - lon1) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((lat1 * Math.PI) / 180) *
-          Math.cos((lat2 * Math.PI) / 180) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    }
-
-    // Filtros
-    let filteredCattle = cattle;
-
     if (search) {
-      filteredCattle = filteredCattle.filter((cow) =>
+      cattle = cattle.filter((cow) =>
         cow.name.toLowerCase().includes(search.toLowerCase())
       );
-    }
-
-    if (zoneId) {
-      filteredCattle = filteredCattle.filter((cow) => cow.zoneId === zoneId);
-    }
-
-    if (connected !== null) {
-      const isConnected = connected === "true";
-      filteredCattle = filteredCattle.filter(
-        (cow) => cow.connected === isConnected
-      );
-    }
-
-    if (lat !== null && lng !== null && radius !== null) {
-      filteredCattle = filteredCattle.filter((cow) => {
-        const [cowLat, cowLng] = cow.location.coordinates;
-        const distance = calculateDistance(lat, lng, cowLat, cowLng);
-        return distance <= radius;
-      });
     }
 
     return NextResponse.json(
       {
         success: true,
-        data: filteredCattle,
+        data: cattle,
       },
       { status: 200 }
     );
@@ -181,4 +169,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
