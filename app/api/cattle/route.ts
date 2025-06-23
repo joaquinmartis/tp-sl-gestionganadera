@@ -8,7 +8,6 @@ import clientPromise from "@/lib/mongodb";
  */
 export async function GET(request: NextRequest) {
   try {
-    // Obtener parámetros de búsqueda de la URL
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get("search") || "";
     const zoneId = searchParams.get("zoneId");
@@ -23,21 +22,31 @@ export async function GET(request: NextRequest) {
       ? Number.parseFloat(searchParams.get("radius") || "")
       : null;
 
-    const client = await clientPromise
-    const db = client.db()
-    const collection = db.collection("cattle")
+    const client = await clientPromise;
+    const db = client.db();
+    const collection = db.collection("cattle");
 
-    let cattle = await collection.find().toArray()
-    // Simulación de datos de ganado
+    let cattle = await collection.find().toArray();
 
-    // Función para calcular la distancia entre dos puntos (Haversine formula)
+    // Convertir coordinates a [lat, lng] para frontend
+    cattle = cattle.map((cow) => ({
+      ...cow,
+      location: {
+        ...cow.location,
+        coordinates: [
+          cow.location.coordinates[1], // lat
+          cow.location.coordinates[0], // lng
+        ],
+      },
+    }));
+
     function calculateDistance(
       lat1: number,
       lon1: number,
       lat2: number,
       lon2: number
     ): number {
-      const R = 6371; // Radio de la Tierra en km
+      const R = 6371;
       const dLat = ((lat2 - lat1) * Math.PI) / 180;
       const dLon = ((lon2 - lon1) * Math.PI) / 180;
       const a =
@@ -47,25 +56,22 @@ export async function GET(request: NextRequest) {
           Math.sin(dLon / 2) *
           Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c; // Distancia en km
+      return R * c;
     }
 
-    // Aplicar filtros
+    // Filtros
     let filteredCattle = cattle;
 
-    // Filtrar por término de búsqueda
     if (search) {
       filteredCattle = filteredCattle.filter((cow) =>
         cow.name.toLowerCase().includes(search.toLowerCase())
       );
     }
 
-    // Filtrar por zona
     if (zoneId) {
       filteredCattle = filteredCattle.filter((cow) => cow.zoneId === zoneId);
     }
 
-    // Filtrar por estado de conexión
     if (connected !== null) {
       const isConnected = connected === "true";
       filteredCattle = filteredCattle.filter(
@@ -73,15 +79,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Filtrar por ubicación (coordenadas y radio)
     if (lat !== null && lng !== null && radius !== null) {
       filteredCattle = filteredCattle.filter((cow) => {
-        const distance = calculateDistance(
-          lat,
-          lng,
-          cow.position[0],
-          cow.position[1]
-        );
+        const [cowLat, cowLng] = cow.location.coordinates;
+        const distance = calculateDistance(lat, lng, cowLat, cowLng);
         return distance <= radius;
       });
     }
@@ -104,10 +105,15 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+/**
+ * POST /api/cattle
+ * Inserta una vaca con formato correcto GeoJSON
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    // Validar campos requeridos (id ya no es requerido)
+
     const requiredFields = [
       "name",
       "description",
@@ -116,6 +122,7 @@ export async function POST(request: NextRequest) {
       "connected",
       "zoneId",
     ];
+
     for (const field of requiredFields) {
       if (
         body[field] === undefined ||
@@ -131,16 +138,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generar id automáticamente (por ejemplo, usando Date.now y Math.random)
-    const generatedId = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+    const [lat, lng] = body.position;
+    const cowId = body.id || `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
 
-    // Validar y construir el objeto con el formato requerido
-    const newCow = {
-      id: generatedId,
+    const cowData = {
+      id: cowId,
       name: body.name,
       description: body.description,
       imageUrl: body.imageUrl,
-      position: [Number(body.position[0]), Number(body.position[1])],
+      location: {
+        type: "Point",
+        coordinates: [lng, lat], // GeoJSON
+      },
       connected: Boolean(body.connected),
       zoneId: body.zoneId,
     };
@@ -149,17 +158,27 @@ export async function POST(request: NextRequest) {
     const db = client.db();
     const collection = db.collection("cattle");
 
-    await collection.insertOne(newCow);
+    const existing = await collection.findOne({ id: cowId });
 
-    return NextResponse.json(
-      { success: true, message: "Animal insertado correctamente" },
-      { status: 201 }
-    );
+    if (existing) {
+      await collection.updateOne({ id: cowId }, { $set: cowData });
+      return NextResponse.json(
+        { success: true, message: "Vaca actualizada correctamente" },
+        { status: 200 }
+      );
+    } else {
+      await collection.insertOne(cowData);
+      return NextResponse.json(
+        { success: true, message: "Vaca insertada correctamente" },
+        { status: 201 }
+      );
+    }
   } catch (error) {
-    console.error("Error al insertar ganado:", error);
+    console.error("Error al insertar/actualizar ganado:", error);
     return NextResponse.json(
-      { success: false, error: "Error al insertar ganado" },
+      { success: false, error: "Error al insertar/actualizar ganado" },
       { status: 500 }
     );
   }
 }
+

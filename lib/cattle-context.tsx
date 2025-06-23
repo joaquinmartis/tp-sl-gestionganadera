@@ -9,7 +9,10 @@ export interface Cattle {
   name: string
   description: string
   imageUrl: string
-  position: [number, number]
+  location: {
+    type: "Point"
+    coordinates: [number, number] // [lng, lat]
+  }
   connected: boolean
   zoneId: string | null
 }
@@ -20,7 +23,12 @@ export interface Zone {
   description: string
   bounds: [[number, number], [number, number]] // [[lat1, lng1], [lat2, lng2]]
   color: string
+  geometry: {
+    type: "Polygon"
+    coordinates: [ [ [number, number] ] ] // [[[lng, lat], ...]]
+  }
 }
+
 
 interface CattleContextType {
   cattle: Cattle[]
@@ -102,8 +110,8 @@ export function CattleProvider({ children }: { children: ReactNode }) {
           const lngChange = (Math.random() - 0.5) * 0.001
 
           // Calcular nueva posición
-          let newLat = cow.position[0] + latChange
-          let newLng = cow.position[1] + lngChange
+          let newLat = cow.location.coordinates[0] + latChange
+          let newLng = cow.location.coordinates[1] + lngChange
 
           // Verificar si la nueva posición estaría fuera de la granja
           const wouldBeOutside = newLat < minLat || newLat > maxLat || newLng < minLng || newLng > maxLng
@@ -162,11 +170,32 @@ export function CattleProvider({ children }: { children: ReactNode }) {
             }
           }
 
-          return {
-            ...cow,
-            position: newPosition,
-            zoneId: newZoneId,
-          }
+const updatedCow = {
+  ...cow,
+  location: {
+    ...cow.location,
+    coordinates: [newLat, newLng], // [lat, lng]
+  },
+  zoneId: newZoneId,
+}
+
+// Enviar actualización al backend
+void fetch("/api/cattle", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    id: updatedCow.id,
+    name: updatedCow.name,
+    description: updatedCow.description,
+    imageUrl: updatedCow.imageUrl,
+    position: updatedCow.location.coordinates, // ya es [lat, lng]
+    connected: updatedCow.connected,
+    zoneId: updatedCow.zoneId,
+  }),
+})
+
+return updatedCow
+
         })
       })
     }, 2000)

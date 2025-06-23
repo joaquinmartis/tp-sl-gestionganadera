@@ -22,7 +22,7 @@ function MapUpdater({ cattle, selectedCattleId }: { cattle: Cattle[]; selectedCa
     if (selectedCattleId) {
       const selectedCow = cattle.find((cow) => cow.id === selectedCattleId)
       if (selectedCow) {
-        map.setView(selectedCow.position, 16)
+        map.setView(selectedCow.location.coordinates, 16)
       }
     }
 
@@ -84,7 +84,7 @@ export default function CattleMap() {
       {cattle.map((cow) => (
         <Marker
           key={cow.id}
-          position={cow.position}
+          position={cow.location.coordinates}
           icon={cowIcon}
           opacity={cow.connected ? 1 : 0.5}
           eventHandlers={{

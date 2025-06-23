@@ -1,6 +1,7 @@
 import { MongoClient } from "mongodb"
 import { generateMockZones, generateMockCattle } from "./mock-data"
 
+
 const uri = process.env.MONGODB_URI as string
 const options = {}
 
@@ -12,16 +13,33 @@ if (!process.env.MONGODB_URI) {
 }
 
 async function runSeedIfNeeded(db: any) {
-  const zonesCount = await db.collection("zones").countDocuments()
+  const zonesCollection = db.collection("zones")
+  const cattleCollection = db.collection("cattle")
+
+  const zonesCount = await zonesCollection.countDocuments()
   if (zonesCount === 0) {
     console.log("🌱 Insertando zonas iniciales...")
-    await db.collection("zones").insertMany(generateMockZones())
+    await zonesCollection.insertMany(generateMockZones())
   }
 
-  const cattleCount = await db.collection("cattle").countDocuments()
+  const cattleCount = await cattleCollection.countDocuments()
   if (cattleCount === 0) {
     console.log("🌱 Insertando vacas iniciales...")
-    await db.collection("cattle").insertMany(generateMockCattle(generateMockZones()))
+    await cattleCollection.insertMany(generateMockCattle(generateMockZones()))
+  } else {
+    console.log("✅ Vacas detectadas en la DB")
+  }
+
+  // 🔍 Crear índice geoespacial si no existe
+  const indexes = await cattleCollection.indexes()
+  const hasGeoIndex = indexes.some((index: { key?: Record<string, any> }) => {
+    return index.key?.location === "2dsphere"
+  })
+
+
+  if (!hasGeoIndex) {
+    console.log("🔧 Creando índice 2dsphere en 'location'...")
+    await cattleCollection.createIndex({ location: "2dsphere" })
   }
 }
 

@@ -51,7 +51,7 @@ export default function CattleList() {
 
     if (!isNaN(lat) && !isNaN(lng) && !isNaN(rad)) {
       filteredCattle = filteredCattle.filter((cow) => {
-        const distance = calculateDistance(lat, lng, cow.position[0], cow.position[1])
+        const distance = calculateDistance(lat, lng, cow.location.coordinates[0], cow.location.coordinates[1])
         return distance <= rad
       })
     }
