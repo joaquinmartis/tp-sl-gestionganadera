@@ -10,16 +10,19 @@ Este es un proyecto de simulación de una granja ganadera con frontend en Next.j
    ```bash
    git clone https://github.com/tuusuario/tp-sl-gestionganadera.git
    cd tp-sl-gestionganadera
-   crear un archivo .env con la siguiente URI:
+   ```
+
+2. **Crear un archivo .env**:
+   ```bash
    MONGODB_URI=mongodb://mongo:27017/mongo
    ```
 
-2. **Levantar todo con Docker**:
+3. **Levantar todo con Docker**:
    ```bash
    docker-compose up --build
    ```
 
-3. El sistema levantará:
+4. El sistema levantará:
 
    - Frontend en Next.js (`http://localhost:3000`)
    - MongoDB accesible desde el backend
