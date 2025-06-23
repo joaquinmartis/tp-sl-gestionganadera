@@ -35,6 +35,7 @@ const COW_IMAGES = [
   "/placeholder.svg?height=200&width=200",
 ]
 
+
 // Helper para transformar dos esquinas a un polígono
 function toPolygon(bounds: [[number, number], [number, number]]) {
   const [[minLat, minLng], [maxLat, maxLng]] = bounds
