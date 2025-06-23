@@ -10,6 +10,8 @@ Este es un proyecto de simulación de una granja ganadera con frontend en Next.j
    ```bash
    git clone https://github.com/tuusuario/tp-sl-gestionganadera.git
    cd tp-sl-gestionganadera
+   crear un archivo .env con la siguiente URI:
+   MONGODB_URI=mongodb://mongo:27017/mongo
    ```
 
 2. **Levantar todo con Docker**:
@@ -72,7 +74,7 @@ El sistema de backups simula un esquema de backup real:
 ## ⚠️ Problemas comunes
 
 ### ❌ El backup no corre en Linux
-Si el script `backup.sh` no se ejecuta correctamente en entornos Linux, probablemente sea por el tipo de final de línea (Windows CRLF).
+'mongo-backup  | sh: 1: /backup.sh: not found'
 
 ✅ **Solución**: Convertí el archivo a formato Unix LF con:
 
@@ -96,6 +98,6 @@ O editá en VS Code y cambiá el tipo de final de línea (abajo a la derecha: CR
 
 ## 📍 Autores
 
-Juan Olave
-Ramiro Cardelli
-Joaquin Martinez
+- Juan Olave
+- Ramiro Cardelli
+- Joaquin Martinez
