@@ -27,6 +27,7 @@ Este es un proyecto de simulación de una granja ganadera con frontend en Next.j
    - Frontend en Next.js (`http://localhost:3000`)
    - MongoDB accesible desde el backend
    - Backend simulando ubicación de vacas y generando backups
+   - Servidor Ngnix exponiendo puerto 80
 
 ---
 
